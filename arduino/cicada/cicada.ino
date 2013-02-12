@@ -1,7 +1,6 @@
 
 
 #include <WiShield.h>
-#define UIP_UDP 1
 #include "uip.h"
 
 #include <string.h>
@@ -60,6 +59,8 @@ float s, s_prev, s_prev2;
 #ifndef sbi
 #define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
 #endif
+
+
 
 
 
@@ -166,7 +167,7 @@ void loop() {
         struct uip_udp_conn *c;
         int temp = sum * 10;
         char str[50];
-        uip_ipaddr(&addr, 209,20.80,141);
+        uip_ipaddr(&addr, 209,20,80,141);
         c = uip_udp_new(&addr, (u16_t)HTONS(17));
        
         sprintf(str,"cicada\t1\t%dt\%d\t%d\n",temp, yes, no); 
