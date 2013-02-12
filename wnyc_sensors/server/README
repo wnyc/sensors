@@ -1,0 +1,38 @@
+WNYC sensor payload format
+
+The format of a WNYC sensor payload is somewhat more permissive than
+the actual messags that can be sent.  While some of the fields allow
+for an arbitrary amount of data, the packets must fit within a 64k UDP
+packet.  Additionally sensors that are not serial connected but
+instead directly connected to a network via WiFi, Ethernet or GRMS
+will have additional limitations.  The WNYC patched WiFishield stack
+is limited to a 200 byte data gram; the GRMS device is limitd to 160 7
+bit characters.
+
+
+Communication from the sensor to WNYC is via UDP.  The BNF for the transmitted packet is as follows
+
+# Packet identifier
+packet = "cicadia\t" <source> <cicadia>
+packet = "first responsder\t" <source> <first_responder>
+
+source = <hash> "\t" <id> "\t"
+hash = [0-9a-f]{16} # 64 bit hash of the sender's email address
+id = [0-9a-f]{2} # The ID number for the sensor.  Each volunteer may setup as many as 256 sensors per email address
+
+ciciadia = "1\t" <temp> <hit_miss>
+temp = [0-9]+\.[0-9]\t    # Temperature in Kelvin
+
+hit_miss = <hit_count> <miss_count>
+hit_count = <number> "\t"
+miss_count = <number> "\t"
+
+number = [0-9]+
+
+first_responder = "1\t" <hit_count> <hit_miss>
+
+
+
+
+
+
