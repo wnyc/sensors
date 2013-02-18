@@ -21,6 +21,12 @@ class Packet(str):
         self.version = self.pop_int()
         self.parse()
 
+    def as_dict(self):
+        return {'hash': self.hash,
+                'device': self.device,
+                'version': self.version,
+                'packet_type': self.__class__.__name__}
+
     def pop_hex(self):
         return self.pop_int(16)
 
@@ -36,13 +42,24 @@ class Packet(str):
         
 
 class CicadiaPacket(Packet, ParseHitMiss, ParseFloat):
-    sql_table = "data_ciciadia";
+    def as_dict(self):
+        d = Packet.as_dict(self)
+        d.update({'temp': self.temp,
+                  'hit': self.hit,
+                  'miss': self.miss})
+        return d
+                
     def parse(self):
         self.temp = self.pop_float()
         self.hit, self.miss = self.pop_hit_miss()
         
 
 class FlasherPacket(Packet, ParseHitMiss):
+    def as_dict(self):
+        d = Packet.as_dict(self)
+        d.update({'hit': self.hit,
+                  'miss': self.miss})
+        return d
     def parse(self):
         self.hit, self.miss = self.pop_hit_miss()
 

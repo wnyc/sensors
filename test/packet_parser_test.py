@@ -44,6 +44,7 @@ class HitMissTests():
     def test_miss(self):
         self.assertEquals(self.pkt.miss, self.miss)
 
+
 class FlasherPacketTest(PacketTests, TestCase, HitMissTests):
     name = "flashers"
     type = FlasherPacket

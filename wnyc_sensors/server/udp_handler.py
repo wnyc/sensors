@@ -1,4 +1,5 @@
 import SocketServer
+import json
 from wnyc_sensors.server.packet_parser import Packet
 
 class UDPHandler(SocketServer.BaseRequestHandler):
@@ -10,7 +11,7 @@ class UDPHandler(SocketServer.BaseRequestHandler):
     """
 
     def handle(self):
-        print Packet(self.request[0])
+        print json.dumps(Packet(self.request[0]).as_dict())
 
 def main(port=11311):
     server = SocketServer.UDPServer(('0.0.0.0', port), UDPHandler)
