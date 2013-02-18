@@ -13,15 +13,15 @@ bit characters.
 Communication from the sensor to WNYC is via UDP.  The BNF for the transmitted packet is as follows
 
 # Packet identifier
-packet = "cicadia\t" <source> <cicadia>
-packet = "first responsder\t" <source> <first_responder>
+packet = "cicadia-1\t" <source> <cicadia>
+packet = "first responsder-1\t" <source> <first_responder>
 
 source = <hash> "\t" <id> "\t"
 hash = [0-9a-f]{16} # 64 bit hash of the sender's email address
 id = [0-9a-f]{2} # The ID number for the sensor.  Each volunteer may setup as many as 256 sensors per email address
 
 ciciadia = "1\t" <temp> <hit_miss>
-temp = [0-9]+\.[0-9]\t    # Temperature in Kelvin
+temp = [0-9]+(\.[0-9]+)?\t    # Temperature in Kelvin
 
 hit_miss = <hit_count> <miss_count>
 hit_count = <number> "\t"

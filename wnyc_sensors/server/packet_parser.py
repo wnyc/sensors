@@ -10,14 +10,15 @@ class ParseFloat():
 
 class Packet(str):
     def __init__(self, value):
-        string.__init__(self, value)
-        self.tokens = self.split("\t").reverse()
+        str.__init__(self, value)
+        self.tokens = list(reversed(self.split("\t")))
         packet_type = self.pop()
         if packet_type not in PACKET_PARSE_CLASSES:
-            raise ValueError("Invalid UDP packet.  Don't recognize packet type: " + repr(self.packet_type))
+            raise ValueError("Invalid UDP packet.  Don't recognize packet type: " + repr(packet_type))
         self.__class__ = PACKET_PARSE_CLASSES[packet_type]
         self.hash = self.pop_hex()
-        self.device = self.pop_int
+        self.device = self.pop_int()
+        self.version = self.pop_int()
         self.parse()
 
     def pop_hex(self):
@@ -27,7 +28,7 @@ class Packet(str):
         return int(self.pop(), base)
 
     def pop(self):
-        self.tokens.pop()
+        return self.tokens.pop()
 
     def pops(self, count=1):
         for _ in range(count):
@@ -42,7 +43,7 @@ class CicadiaPacket(Packet, ParseHitMiss, ParseFloat):
 
 class FlasherPacket(Packet, ParseHitMiss):
     def parse(self):
-        self.hit, self.miss = self.pop_float()
+        self.hit, self.miss = self.pop_hit_miss()
 
 PACKET_PARSE_CLASSES['cicadia'] = CicadiaPacket
 PACKET_PARSE_CLASSES['flashers'] = FlasherPacket
