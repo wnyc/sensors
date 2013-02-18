@@ -2,6 +2,7 @@ from wnyc_sensors.server.packet_parser import Packet, CicadiaPacket, FlasherPack
 
 from unittest import main, TestCase
 
+
 class PacketTests():
     hash = int("deafbeef", 16)
     device = 3

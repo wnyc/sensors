@@ -36,6 +36,7 @@ class Packet(str):
         
 
 class CicadiaPacket(Packet, ParseHitMiss, ParseFloat):
+    sql_table = "data_ciciadia";
     def parse(self):
         self.temp = self.pop_float()
         self.hit, self.miss = self.pop_hit_miss()
