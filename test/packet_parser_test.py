@@ -13,7 +13,7 @@ class PacketTests():
 
     @property
     def header(self):
-        return "%(name)s\t%(hash)x\t%(device)d\t%(version)s\t"
+        return "%(name)s %(hash)x %(device)d %(version)s "
 
     def test_type(self):
         self.assertTrue(isinstance(self.pkt, self.type))
@@ -33,11 +33,11 @@ class PacketTests():
         return Packet(self.packet_string)
     
     def test_the_test_no_null_entries(self):
-        self.assertTrue(all(self.packet_string.split('\t')))
+        self.assertTrue(all(self.packet_string.split(' ')))
         
 
 class HitMissTests():
-    packet_format = "%(hit)d\t%(miss)d\t"
+    packet_format = "%(hit)d %(miss)d "
     def test_hit(self):
         self.assertEquals(self.pkt.hit, self.hit)
 
@@ -54,7 +54,7 @@ class FlasherPacketTest(PacketTests, TestCase, HitMissTests):
 class CicadiaPacketTest(PacketTests, TestCase, HitMissTests):
     name = "cicadia"
     type = CicadiaPacket
-    packet_format = "%(temp)f\t" + HitMissTests.packet_format
+    packet_format = "%(temp)f " + HitMissTests.packet_format
     def test_temp(self):
         self.assertAlmostEquals(self.pkt.temp, self.temp)
     

@@ -19,6 +19,7 @@ setup(
     long_description=__doc__,
     py_modules = [
         "wnyc_sensors/server/udp_handler",
+        "wnyc_sensors/server/tcp_handler",
         "wnyc_sensors/server/udp_sender",
         "wnyc_sensors/server/packet_parser",
         "wnyc_sensors/server/__init__",
@@ -31,7 +32,9 @@ setup(
     classifiers=[
         ],
     scripts = ['scripts/wnyc_sensor_server',
-               'scripts/wnyc_fake_sensor'],
+               'scripts/wnyc_fake_sensor',
+               'scripts/wnyc_smsgateway_server',
+               ],
     url = "https://github.com/adamdeprince/wnyc_sensors",
     install_requires = [
         ]

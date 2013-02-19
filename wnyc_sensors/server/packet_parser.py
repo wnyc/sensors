@@ -11,7 +11,7 @@ class ParseFloat():
 class Packet(str):
     def __init__(self, value):
         str.__init__(self, value)
-        self.tokens = list(reversed(self.split("\t")))
+        self.tokens = list(reversed(self.split(" ")))
         packet_type = self.pop()
         if packet_type not in PACKET_PARSE_CLASSES:
             raise ValueError("Invalid UDP packet.  Don't recognize packet type: " + repr(packet_type))
