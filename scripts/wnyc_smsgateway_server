@@ -1,0 +1,6 @@
+#!/usr/bin/python
+
+from wnyc_sensors.server.tcp_handler import main
+
+if __name__ == "__main__":
+   main()
