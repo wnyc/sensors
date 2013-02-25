@@ -59,24 +59,35 @@
 
 void setup()
 {
-  pinMode(THERMOMETER, INPUT);
-  
-  for(i=2;i<11;i++) 
-    pinMode(i, OUTPUT);
+  pinMode(2, OUTPUT);
+  pinMode(3, OUTPUT);
+  pinMode(4, OUTPUT);
+  pinMode(5, OUTPUT);
+  pinMode(6, OUTPUT);
+  pinMode(7, OUTPUT);
+  pinMode(8, OUTPUT);
+  pinMode(9, OUTPUT);
+  pinMode(10, OUTPUT);
+ 
 
   pinMode(12, INPUT);
-  pinmode(13, INPUT);
+  pinMode(13, INPUT);
 }
 
 void setBit(int bit, boolean value) {
-  digitalWrite(bit + 2, value ? HIGH | LOW);
+  digitalWrite(bit + 2, value ? HIGH : LOW);
 }
+
+void setBit(int bit, int value) {
+  setBit(bit, value != 0);
+}
+
 
 void all_on() {
   // Set all LEDs on.
   int i;
   for(i=0; i < 9;i++) {
-    setBit(i, True);
+    setBit(i, true);
   }
 }
 
@@ -84,16 +95,16 @@ void all_off() {
   // Set all LEDs off.
   int i;
   for(i=0; i < 9; i++ ) {
-    setBit(i, False);
+    setBit(i, false);
     }
 }
 
-void write(unsigned byte i) {
-  unsigned byte display = 1;
+void write(unsigned char i) {
+  unsigned char display = 1;
   if (i > 239)
     return all_on();
 
-  i = (i+16) * 17 / 16 - 16
+  display = (i+16) * 17 / 16 - 16;
 
     setBit(0, display & 1);
     setBit(1, display & 2);
@@ -120,9 +131,9 @@ int eeprom_read_int(int i) {
 
 int measure_temperature() {
   int i;
-  sum = 0;
+  int sum = 0;
   for(i=0;i<16;i++)
-    sum += analogRead(SENSOR);
+    sum += analogRead(THERMOMETER);
   sum /= 16;
   return sum;
 }
@@ -164,13 +175,13 @@ void stablized_temperature_store(int eeprom, int blink_rate) {
 }
 
 void low_set_loop() {
-  stablized_temperature_store("Establishing low temp:", 16, 1);
+  stablized_temperature_store(16, 1);
   all_on();
   while(1) delay(1000);
 }
 
 void high_set_loop() {
-  stablized_temperature_store("Establishing high temp:", 18, 2);
+  stablized_temperature_store(18, 2);
   all_on();
   while(1) delay(1000);
 }
@@ -200,8 +211,7 @@ void loop_main() {
 
   if ((EEPROM.read(16) == 255 && EEPROM.read(17)) ||
       (EEPROM.read(18) == 255 && EEPROM.read(19)) ) {
-    digitalWrite(LED, HIGH);
-       
+         
     if (EEPROM.read(16) == 255)
       Serial.println("Low temperature not yet calibrated.  Stick the termocouple in a glass of ice water, jumper pin 10 to 3.3v and power cycle\n");
       
@@ -210,14 +220,14 @@ void loop_main() {
     all_on();
     delay(500);
     all_off();
-    delay(500);
+    delay(50);
     return; 
   }
     
   // Our LED array can emit values in the range [0, 239].  Our
   // temperature will be in units of 0.25 celcius with zero and -20c.  This
   // will give us a range from [-20, 39.75] celcius.
-  write_int((temp_as_k(measure_temperature()) + 20.0) / 4.0);
+  write((temp_as_k(measure_temperature()) + 20.0) / 4.0);
 }
 
 void loop() {
