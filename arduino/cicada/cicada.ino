@@ -93,13 +93,13 @@ void SendTextMessage(char *msg)
 {
   Serial.println("Sending text message");
   GPRS.print("AT+CMGF=1\r");    //Because we want to send the SMS in text mode
-  delay(100);
-  GPRS.println("AT + CMGS = \"+16463713426\"");//send sms message, be careful need to add a country code before the cellphone number
-  delay(100);
+  delay(200);
+  GPRS.println("AT + CMGS = \"41411\"");//send sms message, be careful need to add a country code before the cellphone number
+  delay(200);
   GPRS.println(msg);//the content of the message
-  delay(100);
+  delay(200);
   GPRS.println((char)26);//the ASCII code of the ctrl+z is 26
-  delay(100);
+  delay(200);
   GPRS.println();
 }
 
@@ -122,13 +122,15 @@ int eeprom_read_int(int i) {
   return EEPROM.read(i) << 8 | EEPROM.read(i+1);
 }
 
-int temps[30];
+#define STABLE 20
+
+int temps[STABLE];
 void stablized_temperature_store(char *desc, int eeprom, int blink_rate) {
  
   int i, minimum, maximum,offset;
   digitalWrite(THERMOMETER, HIGH);
   delay(500);
-  for(i=0;i<30;i+=1) {
+  for(i=0;i<STABLE;i+=1) {
     if (i%2)
       temps[i] = 1;
     else
@@ -141,7 +143,7 @@ void stablized_temperature_store(char *desc, int eeprom, int blink_rate) {
   while ((maximum - minimum) > 5) {
     minimum = temps[0];
     maximum = temps[0];
-    for(i=1;i<30;i++) {
+    for(i=1;i<STABLE;i++) {
       if (temps[i] < minimum) minimum = temps[i];
       if (temps[i] > maximum) maximum = temps[i];
     }
@@ -163,7 +165,7 @@ void stablized_temperature_store(char *desc, int eeprom, int blink_rate) {
     Serial.print(maximum);
     Serial.println("]");
 
-    offset = (offset + 1 ) % 30;
+    offset = (offset + 1 ) % STABLE;
     for(i=0;i<blink_rate*3;i++) {
 
       digitalWrite(LED, HIGH);
@@ -172,7 +174,7 @@ void stablized_temperature_store(char *desc, int eeprom, int blink_rate) {
       delay(500/blink_rate);       
     }
   }
-  eeprom_write_int(eeprom, (temps[offset] + temps[(offset-1)%30])/2);
+  eeprom_write_int(eeprom, (temps[offset] + temps[(offset-1)%STABLE])/2);
   digitalWrite(THERMOMETER, LOW);
 }
 
@@ -246,7 +248,7 @@ void loop_main() {
   cbi(ADCSRA,ADPS1) ;
   cbi(ADCSRA,ADPS0) ;
   digitalWrite(1, HIGH);
-  for(listen_count=0;listen_count < 100; listen_count += 1) {
+  for(listen_count=0;listen_count < 10; listen_count += 1) {
     Serial.println("Listening");
     coeff = 2 * cos(2*M_PI*7000/freq);
 
@@ -301,6 +303,7 @@ void loop_main() {
   sbi(ADCSRA,ADPS1) ;
   sbi(ADCSRA,ADPS0) ;
 
+  digitalWrite(LED, LOW); 
   digitalWrite(THERMOMETER, HIGH);
   digitalWrite(AMP, LOW);
   delay(500);
@@ -315,13 +318,13 @@ void loop_main() {
     digitalWrite(AMP, LOW);
     
     powerUp();
-    for(i=0;i<10;i++) delay(1000);
-    char str[50];
-    sprintf(str,"cicada\t1\t%f\t%d\t%d",temp, yes, no); 
-    SendTextMessage(str);
     delay(30000);
+    char str[50];
+    sprintf(str,"cicada 1 %d %d %d",int(temp*10), yes, no); 
+    SendTextMessage(str);
+    delay(40000);
     powerDown();
-    for(i=0;i<7;i++)   LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
+    for(i=0;i<170;i++)   LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);
   } 
 }
 

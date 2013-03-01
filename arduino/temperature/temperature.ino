@@ -5,7 +5,7 @@
 // 
 // Analog input #0 is connected as follows;
 // 
-// 5v+ <---/\/\/ 5k ohm /\/\---> A0 <--- /\/\/ thermistor/\/\-> Ground 
+// 5v+ <---/\/\/ 50k ohm /\/\---> A0 <--- /\/\/ thermistor/\/\-> Ground 
 // 
 // The thermometer has two calibration phases.  They are performed as follows:
 //
@@ -99,22 +99,35 @@ void all_off() {
     }
 }
 
-void write(unsigned char i) {
+void write(unsigned int i) {
   unsigned char display = 1;
-  if (i > 239)
-    return all_on();
-
-  display = (i+16) * 17 / 16 - 16;
-
+  if (i > 255 + 16) {
+    all_on();
+    return ;
+  }
+  if (i > 255) {
+    i -= 255;
     setBit(0, display & 1);
     setBit(1, display & 2);
     setBit(2, display & 4);
     setBit(3, display & 8);
-    setBit(4, ((i >> 4) & 0x0f) > ( i & 0x0f));
-    setBit(5, display & 128);
-    setBit(6, display & 64);
-    setBit(7, display & 32);
-    setBit(8, display & 16);
+    setBit(4, true);
+    setBit(5, display & 1);
+    setBit(6, display & 2);
+    setBit(7, display & 4);
+    setBit(8, display & 8);
+    return;
+  } 
+  
+  setBit(0, display & 1);
+  setBit(1, display & 2);
+  setBit(2, display & 4);
+  setBit(3, display & 8);
+  setBit(4, ((i >> 4) & 0x0f) < ( i & 0x0f));
+  setBit(5, display & 128);
+  setBit(6, display & 64);
+  setBit(7, display & 32);
+  setBit(8, display & 16);
   }
 
 void eeprom_write_int(int o, int i) {
