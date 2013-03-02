@@ -59,6 +59,7 @@
 
 void setup()
 {
+   Serial.begin(19200); 
   pinMode(2, OUTPUT);
   pinMode(3, OUTPUT);
   pinMode(4, OUTPUT);
@@ -69,9 +70,15 @@ void setup()
   pinMode(9, OUTPUT);
   pinMode(10, OUTPUT);
  
-
+  // Can't use pin #13 - when we connect something to it, the "L" led on the audrino lights up. 
+  // I don't know what that means :-/ 
+  
+  pinMode(11, INPUT);  
   pinMode(12, INPUT);
-  pinMode(13, INPUT);
+  // Turn on the pull up resistors.  See http://arduino.cc/en/Tutorial/DigitalPins
+  digitalWrite(11, HIGH);
+  digitalWrite(12, HIGH);
+    
 }
 
 void setBit(int bit, boolean value) {
@@ -244,12 +251,17 @@ void loop_main() {
 }
 
 void loop() {
-  if (digitalRead(12))
+  if (!digitalRead(11)) {
+    Serial.println("Trying to set low\n");
     return low_set_loop();
+  }
  
-  if (digitalRead(13))
+  
+  if (!digitalRead(12)){
+      Serial.println("Trying to set high\n");
     return high_set_loop();
- 
+   
+  } else Serial.println("Not high\n");
   loop_main();
 }
 
