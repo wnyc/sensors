@@ -50,7 +50,7 @@
 #define THERMOMETER 0
 #define SET_LOW 12
 #define SET_HIGH 13 
-#define HIGH_TEMP 22 // Armpits are 36.5, but for this demo we use room temp,  72F = 22C
+#define HIGH_TEMP 21 // Armpits are 36.5, but for this demo we use room temp,  70F ~= 21C
 
 void setup()
 {
@@ -103,6 +103,8 @@ void all_off() {
 }
 
 void write(unsigned int i) {
+  Serial.print("Indicated temp: ");
+  Serial.println(i);
   unsigned char display = 1;
   if (i > 255 + 16) {
     all_on();
@@ -157,7 +159,7 @@ int measure_temperature() {
 void stablized_temperature_store(int eeprom, int blink_rate) {
   // Wait until the temperaeture stablizes and set the eeprom.
   const int samples=30;
-  const int threshold=5;
+  const int threshold=10;
   int temps[samples]; 
   int i, minimum, maximum,offset;
 
@@ -211,11 +213,12 @@ float temp_as_k(int value) {
   Serial.println(eeprom_read_int(16));
   Serial.print("High level: ");
   Serial.println(eeprom_read_int(18));
+  Serial.println("Sensor value: ");
   Serial.println(value);
   float temp = value - eeprom_read_int(16);
-  Serial.println(temp);
   temp *= HIGH_TEMP / float(eeprom_read_int(18) - eeprom_read_int(16));
   temp += 273.15;
+  Serial.println("Kelvin: ");
   Serial.println(temp);
   return temp;
 }
@@ -245,7 +248,8 @@ void loop_main() {
   // Our LED array can emit values in the range [0, 239].  Our
   // temperature will be in units of 0.25 celcius with zero and -20c.  This
   // will give us a range from [-20, 39.75] celcius.
-  write((temp_as_k(measure_temperature()) + 20.0) / 4.0);
+  write((temp_as_k(measure_temperature()) -273.15 + 20) * 4.0);
+  delay(5000);
 }
 
 void loop() {
