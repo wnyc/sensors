@@ -50,6 +50,7 @@
 #define THERMOMETER 0
 #define SET_LOW 12
 #define SET_HIGH 13 
+#define HIGH_TEMP 22 // Armpits are 36.5, but for this demo we use room temp,  72F = 22C
 
 void setup()
 {
@@ -213,7 +214,7 @@ float temp_as_k(int value) {
   Serial.println(value);
   float temp = value - eeprom_read_int(16);
   Serial.println(temp);
-  temp *= 36.5 / float(eeprom_read_int(18) - eeprom_read_int(16));
+  temp *= HIGH_TEMP / float(eeprom_read_int(18) - eeprom_read_int(16));
   temp += 273.15;
   Serial.println(temp);
   return temp;
