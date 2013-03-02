@@ -245,7 +245,7 @@ void loop_main() {
   // temperature will be in units of 0.25 celcius with zero and -20c.  This
   // will give us a range from [-20, 39.75] celcius.
   write((temp_as_k(measure_temperature()) -273.15 + 20) * 4.0);
-  delay(5000);
+  delay(10000);
 }
 
 void loop() {
