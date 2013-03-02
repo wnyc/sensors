@@ -99,8 +99,11 @@ void all_off() {
 }
 
 void write(unsigned int i) {
+  Serial.print("Temp in F ");
+  Serial.println((i * 9.0 - 80.0 ) / 20.0);
   Serial.print("Indicated temp: ");
   Serial.println(i);
+
 
   if (i > 255 + 16) {
     all_on();
