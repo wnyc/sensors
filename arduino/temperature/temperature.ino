@@ -76,10 +76,6 @@ void setup()
 }
 
 void setBit(int bit, boolean value) {
-  Serial.print("Setting light # ");
-  Serial.print(bit);
-  Serial.print(" set to ");
-  Serial.println(value);
   digitalWrite(bit + 2, value ? HIGH : LOW);
 }
 
