@@ -80,10 +80,6 @@ void setBit(int bit, boolean value) {
   digitalWrite(bit + 2, value ? HIGH : LOW);
 }
 
-void setBit(int bit, int value) {
-  // Careful, comparisons return ints not booleans, which breaks function overloading.
-  setBit(bit, boolean(value != 0));
-}
 
 
 void all_on() {
@@ -105,34 +101,34 @@ void all_off() {
 void write(unsigned int i) {
   Serial.print("Indicated temp: ");
   Serial.println(i);
-  unsigned char display = 1;
+
   if (i > 255 + 16) {
     all_on();
     return ;
   }
   if (i > 255) {
     i -= 255;
-    setBit(0, display & 1);
-    setBit(1, display & 2);
-    setBit(2, display & 4);
-    setBit(3, display & 8);
+    setBit(0, i & 1);
+    setBit(1, i & 2);
+    setBit(2, i & 4);
+    setBit(3, i & 8);
     setBit(4, true);
-    setBit(5, display & 1);
-    setBit(6, display & 2);
-    setBit(7, display & 4);
-    setBit(8, display & 8);
+    setBit(5, i & 1);
+    setBit(6, i & 2);
+    setBit(7, i & 4);
+    setBit(8, i & 8);
     return;
   } 
   
-  setBit(0, display & 1);
-  setBit(1, display & 2);
-  setBit(2, display & 4);
-  setBit(3, display & 8);
+  setBit(0, i & 1);
+  setBit(1, i & 2);
+  setBit(2, i & 4);
+  setBit(3, i & 8);
   setBit(4, ((i >> 4) & 0x0f) < ( i & 0x0f));
-  setBit(5, display & 128);
-  setBit(6, display & 64);
-  setBit(7, display & 32);
-  setBit(8, display & 16);
+  setBit(5, i & 128);
+  setBit(6, i & 64);
+  setBit(7, i & 32);
+  setBit(8, i & 16);
   }
 
 void eeprom_write_int(int o, int i) {
