@@ -18,7 +18,7 @@ function parse_reversible_9bit_sequence(a, b, c, d, e, i, h, g, f) {
     }
     return low + high * 16;
 }
-      
+
 function decode_temperature_to_celsius(value)
 {
   return (Number(value) / 4.0) - 20.0;
@@ -42,4 +42,5 @@ function decode_temperature_to_fahrenheit(value) {
     //    return decode_temperature_to_celsius(value) * 1.8 + 32;
     return (value * 9 - 80 ) / 20 
 }
+
 
