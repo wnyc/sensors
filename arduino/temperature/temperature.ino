@@ -13,22 +13,22 @@
 // 2. Fill a glass half full with crused ice and top it off with
 //    water.  Allow to sit for 5 minutes.
 // 3. Immerse the temperature probe into the ice wate mixture
-// 4. Jumper 3.3V+ to Digital I/O #12
+// 4. Jumper Ground to Digital I/O #11
 // 5. Power on the sensor with battery power only and leave powered on
 //    until the LEDs stop flashing. This shouldf require about 5 minutes.
 // 6. When the LEDS stop flashing power off the sensor.
 // 7. Place the sensor under your arm
-// 8. Jumper 3.3V+ to Digital I/O #13 instead of #12
+// 8. Jumper ground to Digital I/O #12 instead of #11
 // 9. Power on the sensor and wait until the flashing stops.  Thos
 //    step should require 5 minutes.
 // 10. Power down the sensor
-// 11. Remove all jumpers from #12 and #13
+// 11. Remove all jumpers from #11 and #12
 //
 // Calibration is complete.
 //
 // Upon starting the sensor temperature is shown as the number of
 // quarter degrees above -20C.  This value is shown with a novel
-// encoding that permits the storage of values between [0, 239] to be
+// encoding that permits the storage of values between [0, 255 + 16] to be
 // stored and decoded within 9 bits without abigioutly in the event of
 // reversal.
 // 
@@ -39,12 +39,6 @@
 // unabigiously decoded whether read from the sensor forward or
 // backward.
 // 
-// Prior to display the following function is applied to the
-// temperatuer to ensure the upper and lower nibbles are never the
-// same:
-//
-// F(t) = (t+16) * 17 / 16 - 16
-//
 // To deploy your sensor bury your thermocouple 8 inches under the
 // groun in an area of partial share near a tree.  Connect your
 // thermometer, power on and record the bit pattern into the WNYC
@@ -82,11 +76,16 @@ void setup()
 }
 
 void setBit(int bit, boolean value) {
+  Serial.print("Setting light # ");
+  Serial.print(bit);
+  Serial.print(" set to ");
+  Serial.println(value);
   digitalWrite(bit + 2, value ? HIGH : LOW);
 }
 
 void setBit(int bit, int value) {
-  setBit(bit, value != 0);
+  // Careful, comparisons return ints not booleans, which breaks function overloading.
+  setBit(bit, boolean(value != 0));
 }
 
 
@@ -183,6 +182,8 @@ void stablized_temperature_store(int eeprom, int blink_rate) {
 	maximum = temps[i];
     }
     temps[offset] = measure_temperature();
+    Serial.print("Current sensor value ");
+    Serial.println(temps[offset]);
     offset = (offset + 1 ) % samples;
     for(i=0;i<blink_rate*3;i++) {
       all_on();
