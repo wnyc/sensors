@@ -1,49 +1,133 @@
-//
-// Basic ground temperature thermometer.
-// 
-// Configuration:
-// 
-// Analog input #0 is connected as follows;
-// 
-// 5v+ <---/\/\/ 50k ohm /\/\---> A0 <--- /\/\/ thermistor/\/\-> Ground 
-// 
-// The thermometer has two calibration phases.  They are performed as follows:
-//
-// 1. Power down the sensor
-// 2. Fill a glass half full with crused ice and top it off with
-//    water.  Allow to sit for 5 minutes.
-// 3. Immerse the temperature probe into the ice wate mixture
-// 4. Jumper Ground to Digital I/O #11
-// 5. Power on the sensor with battery power only and leave powered on
-//    until the LEDs stop flashing. This shouldf require about 5 minutes.
-// 6. When the LEDS stop flashing power off the sensor.
-// 7. Place the sensor under your arm
-// 8. Jumper ground to Digital I/O #12 instead of #11
-// 9. Power on the sensor and wait until the flashing stops.  Thos
-//    step should require 5 minutes.
-// 10. Power down the sensor
-// 11. Remove all jumpers from #11 and #12
-//
-// Calibration is complete.
-//
-// Upon starting the sensor temperature is shown as the number of
-// quarter degrees above -20C.  This value is shown with a novel
-// encoding that permits the storage of values between [0, 255 + 16] to be
-// stored and decoded within 9 bits without abigioutly in the event of
-// reversal.
-// 
-// The following function is applied to the temperature value: The
-// temperature value is broken into two nibbles, the second bit
-// reversed with a single bit between them indicating which of the
-// nibbles is greater.  This is done to ensure the temepature can be
-// unabigiously decoded whether read from the sensor forward or
-// backward.
-// 
-// To deploy your sensor bury your thermocouple 8 inches under the
-// groun in an area of partial share near a tree.  Connect your
-// thermometer, power on and record the bit pattern into the WNYC
-// Cicada page.
-
+/** 
+ *  Basic ground temperature thermometer.
+ *
+ * 
+ * This document assumes you are working with the 503 thermistor that
+ * comes with RadioShack's "Sidekick basic kit for Aruduino"
+ * 
+ * 
+ * Configuration:
+ * 
+ * This software is preconfigured to work with the GE NTC 503 in the
+ * following circuit configuration.  Because the base resistance of the
+ * resistor can vary by about 5% there is an optional calibration
+ * phase, but we've generally found you can get within a degree or two.
+ * 
+ * Ground <---/\/\/ 50k ohm /\/\---> A0 <--- /\/\/ NTC 503 /\/\-> +5V
+ * 
+ * To get the output this design also assumes that you have, a series
+ * of 9 LEDS connected to digital pins 2-10 inclusive, wired in series
+ * with a resistor between about 300 and 600 ohms.
+ * 
+ * Optional calibration:
+ * 
+ * 1. Power down the sensor
+ * 2. Fill a glass half full with crused ice and top it off with
+ *    water.  Allow to sit for 5 minutes.
+ * 3. Immerse the temperature probe into the ice wate mixture
+ * 4. Jumper ground to digital I/O #11
+ * 5. Power on the sensor with battery power only and leave powered on
+ *    until the LEDs stop flashing. This shouldf require about 5 minutes.
+ * 6. When the LEDS stop flashing power off the sensor.
+ * 7. Remove the wire to digital I/O #11 
+ * 
+ * To erase the calibration data:
+ * 
+ * 1. Power donw the sensor
+ * 2. Jumper ground to digital I/O #12 
+ * 3. Wait until all of the lights are lit
+ * 4. Power down the sensor
+ * 5. Remove the wire attached to digital I/O #12
+ * 
+ * How to read the temperature.
+ *  
+ * There are four distinct steps that go into turning a sensor value
+ * into a temperature.  First we have to address the non-linearity of
+ * the resistor network that we use to read the sensor.  Our A/D
+ * converter values do not linearly translate into resistances.
+ * 
+ * The above circult uses a pulldown resistor; if we measure the
+ * voltage between the thermistor and the resistor it will follow the
+ * following formuala:
+ * 
+ * V0 = V * R  / (R0 + R)
+ * 
+ * Where:
+ * 
+ * "V" is the voltage of the circuit.  For our purposes we can use the
+ * maximum range of the A/D converter as our unit.
+ * R is the resitance of our thermistor
+ * R0 is the resistance of our pull 
+ * V0 is the value our A/D converter will read
+ *  
+ * The second step is to apply any calibration factor we might have.
+ * THe "base resistance" of the sensor in the Radioshack kit is 5%,
+ * this can result in a change of a few degrees, expecially in the
+ * higher temperatures.  GE 503's also vary in theor "B" value - that
+ * is the rate at which they respond to temperature changes.  We don't
+ * at this time try to calibrate that, but might in the future.
+ * 
+ * 
+ * We generate a "correction factor" that we multiple our computed
+ * resistance by.  The foruma for this is:
+ * 
+ * C = Rexp / Rcal
+ * 
+ * Where:
+ * 
+ * Rexp is the resistance we expect for our thermistor at 0C
+ *  
+ * Rcal is the actual resistance resistance we measured during our
+ * calibration phase.
+ * 
+ * So how do we get Rexp?  We can compute it from the Steinhard-Hart
+ * equation.  Radioshack doesn't seem to provide a "B" value for this
+ * thermistor, but 4150 is pretty typical and seems to work for this
+ * kit.
+ * 
+ * The computation for Rexp is:
+ * 
+ * Rexp = R0 * exp(B * (1/T - 1/T0))
+ * 
+ * Where: 
+ *   R0: The resistance at T0
+ *   T0: The reference temperature of this thermisor's rated
+ *       resistance (typically 25C, or 298.15K)
+ *   B: The "B" parameter (we're guessing at 4150) 
+ *   T: The temperature we want to compute the resistance for
+ * 
+ * Once we know the current resistance of the sensor we need to
+ * convert this into Kelvin.  Again, the formual for this is
+ * non-linear.  Because GE provides a B parameter value, we use the B
+ * parameter with in the Steinhard-Hart equation as described in the
+ * wikipedia (http://en.wikipedia.org/wiki/Thermistor)
+ * 
+ * So to generate a temperature we compute: 
+ * 
+ * T = (1 / (1 / T0 + 1 / B * log(R / R0)))
+ * 
+ * Where: 
+ *   T0: The reference "rated" temp of this thermistor (298.15K)
+ *   B: The B value (4150)
+ *   R: The current resistance (adjusted in our calibration cycle)
+ *   R0: The rated resistance at T0
+ * 
+ * We then translate this into a series of 9 bits that describes the
+ * temperature as quarte degrees C above -20C.  This value is shown
+ * with a novel encoding that permits the storage of values between
+ * [0, 255 + 16] to be stored and decoded within 9 bits without
+ * abigioutly in the event of reversal.
+ * 
+ * The following function is applied to the temperature value: The
+ * temperature value is broken into two nibbles, the second bit
+ * reversed with a single bit between them indicating which of the
+ * nibbles is greater.  This is done to ensure the temepature can be
+ * unabigiously decoded whether read from the sensor forward or
+ * backward.
+ * 
+ * Wnyc has a decoder at http://project.wnyc.org/cicadas/
+ * 
+*/
 
 #include <EEPROM.h>
 
@@ -51,58 +135,94 @@
 #define SET_LOW 12
 
 
-// The resistance expected of an NTC 503 at 0C
-// This is computed by R = R0 * e**(B*1/T - 1/T0) where:
-// 
-// R0 is the resistance at T0 kelvin
-// B is the NTC B parameter
-// T is the temperature the resistor is actually at
-// R is the anticipated resistance
-// 
-// The 503 only has a 5% tolerance.  We store this value and compare it to the value established during calibration to compute the actual R25 for this resistor. 
+/* The resistance expected of an NTC 503 at 0C
+ * This is computed by R = R0 * e**(B*1/T - 1/T0) where:
+ * 
+ * R0 is the resistance at T0 kelvin
+ * B is the NTC B parameter
+ * T is the temperature the resistor is actually at
+ * R is the anticipated resistance
+ */ 
+
 const float expected_resistance = 178747;
+
+/* If you change the pulldown resistors change this. */
 const float pulldown_resistance = 50000;
+
+/* If reverse the direction of the resistors and sensor, you have
+ * what's called a pull up, not pull down.  Set this to true. 
+*/
+
 const bool using_pullups = false;
+
+/* The location in the EEPROM to store calibration data */
+
 const int CALIBRATION_OFFSET = 16;
+
+/* THe number of A/D samples to take to reduce the impact of noise.
+ * This is especially important if reading while connected to a USB
+ * jack.
+ */
+
 const int temp_samples = 16;
+
+/* The max value the A/D converter shows.  For an adrunio this will
+ * always be 1023 */
+
 const int AD_MAX = 1023;
+
+
 void setup()
 {
    Serial.begin(19200); 
-  pinMode(2, OUTPUT);
-  pinMode(3, OUTPUT);
-  pinMode(4, OUTPUT);
-  pinMode(5, OUTPUT);
-  pinMode(6, OUTPUT);
-  pinMode(7, OUTPUT);
-  pinMode(8, OUTPUT);
-  pinMode(9, OUTPUT);
+   pinMode(2, OUTPUT);
+   pinMode(3, OUTPUT);
+   pinMode(4, OUTPUT);
+   pinMode(5, OUTPUT);
+   pinMode(6, OUTPUT);
+   pinMode(7, OUTPUT);
+   pinMode(8, OUTPUT);
+   pinMode(9, OUTPUT);
   pinMode(10, OUTPUT);
- 
-  // Can't use pin #13 - when we connect something to it, the "L" led on the audrino lights up. 
-  // I don't know what that means :-/ 
+  
   
   pinMode(11, INPUT);  
   pinMode(12, INPUT);
-  // Turn on the pull up resistors.  See http://arduino.cc/en/Tutorial/DigitalPins
+  
+  /* Turn on the pull up resistors.  See
+   * http://arduino.cc/en/Tutorial/DigitalPins
+   */
+
   digitalWrite(11, HIGH);
   digitalWrite(12, HIGH);
     
 }
 
+/* Set one of the bits in the display 
+ * 
+ * bit: the position from 0..8 inclusive.  Which is right and left?
+ * Doesn't matter with our encoding!
+ * 
+ * value: true is on, false is off.
+ */
+
 void setBit(int bit, boolean value) {
   digitalWrite(bit + 2, value ? HIGH : LOW);
 }
 
-// v1 = v * r2 / (r1 + r2) 
-// r1 = - (r2 v1 - r2 v) / (v1)
+
+/* Given a sensor value and the resistance of the pulldown resistor
+   compute the sensed resistance */
+
 float compute_resistance(int value, float pulldown_resistance) {
   if (using_pullups)
     value = 1024 - value;  
   return -(pulldown_resistance * (float(value) - 1024.0) / float(value));    
 }
 
-
+/* Given a resistance and R0, T0 and B value describing the NTC thermistor 
+ * return the temperature in kelvin.
+ */ 
 float compute_temperature(float resistance, float R0, float T0, float B) {
    Serial.println("Compute temperature");
    Serial.print("Resistance: ");
@@ -117,7 +237,6 @@ float compute_temperature(float resistance, float R0, float T0, float B) {
 }
 
 void all_on() {
-  // Set all LEDs on.
   int i;
   for(i=0; i < 9;i++) {
     setBit(i, true);
@@ -136,12 +255,17 @@ void error_flash() {
 }
 
 void all_off() {
-  // Set all LEDs off.
   int i;
   for(i=0; i < 9; i++ ) {
     setBit(i, false);
     }
 }
+
+/* Write a value between [0..271] inclusive to the display in a way
+ * such that reversing the bits doesn't matter.  The decoder is at
+ * www.wnyc.org/cicadas and
+ * http://github.com/wnyc/sensors/javascript/reversible_bits.js
+ */
 
 void write(unsigned int i) {
   Serial.print("Temp: ");
@@ -149,7 +273,6 @@ void write(unsigned int i) {
   Serial.println("F");
   Serial.print("Encoded value: ");
   Serial.println(i);
-
 
   if (i > 255 + 16) {
     all_on();
@@ -207,7 +330,7 @@ int measure_temperature() {
 }
 
 void stablized_temperature_store(int blink_rate) {
-  // Wait until the temperaeture stablizes and set the eeprom.
+  // Wait until the temperature stablizes and set the eeprom.
   const int samples=30;
   const int threshold=10;
   int temps[samples]; 
@@ -234,16 +357,19 @@ void stablized_temperature_store(int blink_rate) {
     Serial.print("Current sensor value ");
     Serial.println(temps[offset]);
     offset = (offset + 1 ) % samples;
-    for(i=0;i<blink_rate*3;i++) {
+    for(i=0; i < blink_rate * 3; i++) {
       all_on();
       delay(500/blink_rate);
       all_off();
       delay(500/blink_rate);       
     }
   }
-  int final_temp = (temps[offset] + temps[offset-1] % samples) / 2;
-  if ((compute_resistance(final_temp, pulldown_resistance) > expected_resistance * 1.1) || (compute_resistance(final_temp, pulldown_resistance) < expected_resistance * 0.9))
-      while(true) 
+  int final_temp = (temps[offset] + temps[offset - 1] % samples) / 2;
+  if ((compute_resistance(final_temp, pulldown_resistance) > 
+       expected_resistance * 1.1) || 
+      (compute_resistance(final_temp, pulldown_resistance) < 
+       expected_resistance * 0.9))
+    while(true) 
       error_flash();
   eeprom_write_int((temps[offset] + temps[(offset-1)%samples])/2);
 }
@@ -254,11 +380,8 @@ void low_set_loop() {
   while(1) delay(1000);
 }
 
-// Works for NHQ104B400R5 or R10
-float compute_temperature_NHQ104B400(float resistance) {
-    // The NHQ104B400R5 that ships with the Radioshacks' Basic Kit for the Ardruni only has a 5% tolerance.  This means our temperature can be off by a little bit.
-    // To accomodate this we give the user the option of entering a "calibration cycle" where they establish the actual resistance at 0C.
-    // Now to protect against gross miscalibration we discard the results of the calibraiton cycle if the "adjustment ratio" exceeds 5%. 
+float compute_temperature(float resistance) {
+
     const float r25 = 50000;
     if (((eeprom_read_int() != -1)) && 
 	((compute_resistance(eeprom_read_int(), pulldown_resistance)) <= expected_resistance * 1.15) && 
@@ -280,7 +403,7 @@ float compute_temperature_NHQ104B400(float resistance) {
 
 
 float temp_as_k(int value) {
-  float temp = compute_temperature_NHQ104B400(compute_resistance(value, pulldown_resistance));
+  float temp = compute_temperature(compute_resistance(value, pulldown_resistance));
   Serial.print("Resistance: ");
   Serial.println(compute_resistance(value, pulldown_resistance));
   Serial.print("Value: ");
@@ -297,8 +420,6 @@ void loop_main() {
   int no=0;
   int listen_count;
 
-
-    
   // Our LED array can emit values in the range [0, 239].  Our
   // temperature will be in units of 0.25 celcius with zero and -20c.  This
   // will give us a range from [-20, 39.75] celcius.
@@ -312,7 +433,6 @@ void loop() {
     return low_set_loop();
   }
  
-  
   if (!digitalRead(12)){
     Serial.println("Clearing the calibration\n");
     eeprom_erase_int();
