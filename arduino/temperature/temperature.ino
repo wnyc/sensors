@@ -49,9 +49,23 @@
 
 #define THERMOMETER 0
 #define SET_LOW 12
-#define SET_HIGH 13 
-#define HIGH_TEMP 21 // Armpits are 36.5, but for this demo we use room temp,  70F ~= 21C
 
+
+// The resistance expected of an NTC 503 at 0C
+// This is computed by R = R0 * e**(B*1/T - 1/T0) where:
+// 
+// R0 is the resistance at T0 kelvin
+// B is the NTC B parameter
+// T is the temperature the resistor is actually at
+// R is the anticipated resistance
+// 
+// The 503 only has a 5% tolerance.  We store this value and compare it to the value established during calibration to compute the actual R25 for this resistor. 
+const float expected_resistance = 178747;
+const float pulldown_resistance = 50000;
+const bool using_pullups = false;
+const int CALIBRATION_OFFSET = 16;
+const int temp_samples = 16;
+const int AD_MAX = 1023;
 void setup()
 {
    Serial.begin(19200); 
@@ -80,7 +94,27 @@ void setBit(int bit, boolean value) {
   digitalWrite(bit + 2, value ? HIGH : LOW);
 }
 
+// v1 = v * r2 / (r1 + r2) 
+// r1 = - (r2 v1 - r2 v) / (v1)
+float compute_resistance(int value, float pulldown_resistance) {
+  if (using_pullups)
+    value = 1024 - value;  
+  return -(pulldown_resistance * (float(value) - 1024.0) / float(value));    
+}
 
+
+float compute_temperature(float resistance, float R0, float T0, float B) {
+   Serial.println("Compute temperature");
+   Serial.print("Resistance: ");
+   Serial.println(resistance);
+   Serial.print("R0: ");
+   Serial.println(R0);
+   Serial.print("T0: ");
+   Serial.println(T0);
+   Serial.print("B: ");
+   Serial.println(B);
+   return 1/(1.0 / T0 + (1.0 / B) * log(resistance / R0));
+}
 
 void all_on() {
   // Set all LEDs on.
@@ -88,6 +122,17 @@ void all_on() {
   for(i=0; i < 9;i++) {
     setBit(i, true);
   }
+}
+
+void error_flash() {
+  int i;
+  for(i=0; i<9; i++)
+    setBit(i, i & 1);
+ 
+  delay(500);
+  for(i=0; i<9; i++)
+    setBit(i, ~(i & 1));
+  delay(500);
 }
 
 void all_off() {
@@ -99,9 +144,10 @@ void all_off() {
 }
 
 void write(unsigned int i) {
-  Serial.print("Temp in F ");
-  Serial.println((i * 9.0 - 80.0 ) / 20.0);
-  Serial.print("Indicated temp: ");
+  Serial.print("Temp: ");
+  Serial.print((i * 9.0 - 80.0 ) / 20.0);
+  Serial.println("F");
+  Serial.print("Encoded value: ");
   Serial.println(i);
 
 
@@ -134,42 +180,47 @@ void write(unsigned int i) {
   setBit(8, i & 16);
   }
 
-void eeprom_write_int(int o, int i) {
+void eeprom_write_int(int i) {
   // Write a signed integer into the EEPROM
-  EEPROM.write(o, (i >> 8) & 0x3f);
-  EEPROM.write(o+1, i & 0xff);
+  EEPROM.write(CALIBRATION_OFFSET, (i >> 8) & 0x3f);
+  EEPROM.write(CALIBRATION_OFFSET + 1, i & 0xff);
 }
 
-int eeprom_read_int(int i) {
+void eeprom_erase_int() { 
+  EEPROM.write(CALIBRATION_OFFSET, 0xff);
+  EEPROM.write(CALIBRATION_OFFSET + 1, 0xff);
+}  
+
+int eeprom_read_int() {
   // Read a signed integer from the EEPROM
-  return EEPROM.read(i) << 8 | EEPROM.read(i+1);
+  return EEPROM.read(CALIBRATION_OFFSET) << 8 | EEPROM.read(CALIBRATION_OFFSET + 1);
 }
 
 
 int measure_temperature() {
   int i;
   int sum = 0;
-  for(i=0;i<16;i++)
+  for(i=0;i<temp_samples;i++)
     sum += analogRead(THERMOMETER);
-  sum /= 16;
+  sum /= temp_samples;
   return sum;
 }
 
-void stablized_temperature_store(int eeprom, int blink_rate) {
+void stablized_temperature_store(int blink_rate) {
   // Wait until the temperaeture stablizes and set the eeprom.
   const int samples=30;
   const int threshold=10;
   int temps[samples]; 
   int i, minimum, maximum,offset;
-
+  float expected_resistance = (AD_MAX + 1) * (expected_resistance / (expected_resistance + pulldown_resistance));
   for(i=0;i<samples;i+=2)
     temps[i] = 0;
   for(i=1;i<samples;i+=2)
-    temps[i] = 1023;
+    temps[i] = AD_MAX;
 
   offset=0;
   minimum = 0;
-  maximum = 1023;
+  maximum = AD_MAX;
   while ((maximum - minimum) > threshold) {
     minimum = temps[0];
     maximum = temps[0];
@@ -190,37 +241,55 @@ void stablized_temperature_store(int eeprom, int blink_rate) {
       delay(500/blink_rate);       
     }
   }
-  eeprom_write_int(eeprom, (temps[offset] + temps[(offset-1)%samples])/2);
+  int final_temp = (temps[offset] + temps[offset-1] % samples) / 2;
+  if ((compute_resistance(final_temp, pulldown_resistance) > expected_resistance * 1.1) || (compute_resistance(final_temp, pulldown_resistance) < expected_resistance * 0.9))
+      while(true) 
+      error_flash();
+  eeprom_write_int((temps[offset] + temps[(offset-1)%samples])/2);
 }
 
 void low_set_loop() {
-  stablized_temperature_store(16, 1);
+  stablized_temperature_store(1);
   all_on();
   while(1) delay(1000);
 }
 
-void high_set_loop() {
-  stablized_temperature_store(18, 2);
-  all_on();
-  while(1) delay(1000);
+// Works for NHQ104B400R5 or R10
+float compute_temperature_NHQ104B400(float resistance) {
+    // The NHQ104B400R5 that ships with the Radioshacks' Basic Kit for the Ardruni only has a 5% tolerance.  This means our temperature can be off by a little bit.
+    // To accomodate this we give the user the option of entering a "calibration cycle" where they establish the actual resistance at 0C.
+    // Now to protect against gross miscalibration we discard the results of the calibraiton cycle if the "adjustment ratio" exceeds 5%. 
+    const float r25 = 50000;
+    if (((eeprom_read_int() != -1)) && 
+	((compute_resistance(eeprom_read_int(), pulldown_resistance)) <= expected_resistance * 1.15) && 
+        ((compute_resistance(eeprom_read_int(), pulldown_resistance)) >= expected_resistance * 0.90))
+      {   
+	Serial.print("Calibrated.  Actual R25 value is: ");
+	Serial.print(compute_resistance(eeprom_read_int(), pulldown_resistance) * r25 / expected_resistance);
+	Serial.println("Ohms");
+	
+	Serial.print("Eeprom_value: ");
+	Serial.println(eeprom_read_int());
+	
+	return compute_temperature(resistance, 
+				   compute_resistance(eeprom_read_int(), pulldown_resistance) * r25 / expected_resistance, 25, 4150);
+      }
+    Serial.println("Performing uncalibrated thermometer read");
+    return compute_temperature(resistance, r25, 25 + 273.15, 4150);
 }
 
 
 float temp_as_k(int value) {
-  
-  Serial.print("Low level : ");
-  Serial.println(eeprom_read_int(16));
-  Serial.print("High level: ");
-  Serial.println(eeprom_read_int(18));
-  Serial.println("Sensor value: ");
+  float temp = compute_temperature_NHQ104B400(compute_resistance(value, pulldown_resistance));
+  Serial.print("Resistance: ");
+  Serial.println(compute_resistance(value, pulldown_resistance));
+  Serial.print("Value: ");
   Serial.println(value);
-  float temp = value - eeprom_read_int(16);
-  temp *= HIGH_TEMP / float(eeprom_read_int(18) - eeprom_read_int(16));
-  temp += 273.15;
-  Serial.println("Kelvin: ");
+  Serial.print("Kelvin: ");
   Serial.println(temp);
   return temp;
 }
+
 void loop_main() {
   float temp;
   int i;
@@ -229,20 +298,6 @@ void loop_main() {
   int listen_count;
 
 
-  if ((EEPROM.read(16) == 255 && EEPROM.read(17)) ||
-      (EEPROM.read(18) == 255 && EEPROM.read(19)) ) {
-         
-    if (EEPROM.read(16) == 255)
-      Serial.println("Low temperature not yet calibrated.  Stick the termocouple in a glass of ice water, jumper pin 10 to 3.3v and power cycle\n");
-      
-    if (EEPROM.read(18) == 255)
-      Serial.println("High temperature not yet calibrated.  Stick the thermocouple under your arm, jumper pin 11 to 3.3v and power cycle\n");
-    all_on();
-    delay(500);
-    all_off();
-    delay(50);
-    return; 
-  }
     
   // Our LED array can emit values in the range [0, 239].  Our
   // temperature will be in units of 0.25 celcius with zero and -20c.  This
@@ -259,10 +314,12 @@ void loop() {
  
   
   if (!digitalRead(12)){
-      Serial.println("Trying to set high\n");
-    return high_set_loop();
+    Serial.println("Clearing the calibration\n");
+    eeprom_erase_int();
+    all_on();
+    while(true);
+  }
    
-  } else Serial.println("Not high\n");
   loop_main();
 }
 
