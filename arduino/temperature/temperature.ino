@@ -82,8 +82,7 @@
  * 
  * So how do we get Rexp?  We can compute it from the Steinhard-Hart
  * equation.  Radioshack doesn't seem to provide a "B" value for this
- * thermistor, but 4150 is pretty typical and seems to work for this
- * kit.
+ * thermistor, but 2700 seems about right. 
  * 
  * The computation for Rexp is:
  * 
@@ -144,7 +143,10 @@
  * R is the anticipated resistance
  */ 
 
-const float expected_resistance = 178747;
+const float B = 2700;
+const float R0 = 50000;
+const float T0 = 298.15;
+const float expected_resistance = R0 * exp(B * (1/273.15 - 1/T0));
 
 /* If you change the pulldown resistors change this. */
 const float pulldown_resistance = 50000;
@@ -155,9 +157,6 @@ const float pulldown_resistance = 50000;
 
 const bool using_pullups = false;
 
-/* The location in the EEPROM to store calibration data */
-
-const int CALIBRATION_OFFSET = 16;
 
 /* THe number of A/D samples to take to reduce the impact of noise.
  * This is especially important if reading while connected to a USB
@@ -236,6 +235,12 @@ float compute_temperature(float resistance, float R0, float T0, float B) {
    return 1/(1.0 / T0 + (1.0 / B) * log(resistance / R0));
 }
 
+
+float compute_temperature(float resistance) {
+    return compute_temperature(resistance, R0, T0, B);
+}
+
+
 void all_on() {
   int i;
   for(i=0; i < 9;i++) {
@@ -303,22 +308,6 @@ void write(unsigned int i) {
   setBit(8, i & 16);
   }
 
-void eeprom_write_int(int i) {
-  // Write a signed integer into the EEPROM
-  EEPROM.write(CALIBRATION_OFFSET, (i >> 8) & 0x3f);
-  EEPROM.write(CALIBRATION_OFFSET + 1, i & 0xff);
-}
-
-void eeprom_erase_int() { 
-  EEPROM.write(CALIBRATION_OFFSET, 0xff);
-  EEPROM.write(CALIBRATION_OFFSET + 1, 0xff);
-}  
-
-int eeprom_read_int() {
-  // Read a signed integer from the EEPROM
-  return EEPROM.read(CALIBRATION_OFFSET) << 8 | EEPROM.read(CALIBRATION_OFFSET + 1);
-}
-
 
 int measure_temperature() {
   int i;
@@ -328,79 +317,6 @@ int measure_temperature() {
   sum /= temp_samples;
   return sum;
 }
-
-void stablized_temperature_store(int blink_rate) {
-  // Wait until the temperature stablizes and set the eeprom.
-  const int samples=30;
-  const int threshold=10;
-  int temps[samples]; 
-  int i, minimum, maximum,offset;
-  float expected_resistance = (AD_MAX + 1) * (expected_resistance / (expected_resistance + pulldown_resistance));
-  for(i=0;i<samples;i+=2)
-    temps[i] = 0;
-  for(i=1;i<samples;i+=2)
-    temps[i] = AD_MAX;
-
-  offset=0;
-  minimum = 0;
-  maximum = AD_MAX;
-  while ((maximum - minimum) > threshold) {
-    minimum = temps[0];
-    maximum = temps[0];
-    for(i=1; i < samples; i++) {
-      if (temps[i] < minimum) 
-	minimum = temps[i];
-      if (temps[i] > maximum) 
-	maximum = temps[i];
-    }
-    temps[offset] = measure_temperature();
-    Serial.print("Current sensor value ");
-    Serial.println(temps[offset]);
-    offset = (offset + 1 ) % samples;
-    for(i=0; i < blink_rate * 3; i++) {
-      all_on();
-      delay(500/blink_rate);
-      all_off();
-      delay(500/blink_rate);       
-    }
-  }
-  int final_temp = (temps[offset] + temps[offset - 1] % samples) / 2;
-  if ((compute_resistance(final_temp, pulldown_resistance) > 
-       expected_resistance * 1.1) || 
-      (compute_resistance(final_temp, pulldown_resistance) < 
-       expected_resistance * 0.9))
-    while(true) 
-      error_flash();
-  eeprom_write_int((temps[offset] + temps[(offset-1)%samples])/2);
-}
-
-void low_set_loop() {
-  stablized_temperature_store(1);
-  all_on();
-  while(1) delay(1000);
-}
-
-float compute_temperature(float resistance) {
-
-    const float r25 = 50000;
-    if (((eeprom_read_int() != -1)) && 
-	((compute_resistance(eeprom_read_int(), pulldown_resistance)) <= expected_resistance * 1.15) && 
-        ((compute_resistance(eeprom_read_int(), pulldown_resistance)) >= expected_resistance * 0.90))
-      {   
-	Serial.print("Calibrated.  Actual R25 value is: ");
-	Serial.print(compute_resistance(eeprom_read_int(), pulldown_resistance) * r25 / expected_resistance);
-	Serial.println("Ohms");
-	
-	Serial.print("Eeprom_value: ");
-	Serial.println(eeprom_read_int());
-	
-	return compute_temperature(resistance, 
-				   compute_resistance(eeprom_read_int(), pulldown_resistance) * r25 / expected_resistance, 25, 4150);
-      }
-    Serial.println("Performing uncalibrated thermometer read");
-    return compute_temperature(resistance, r25, 25 + 273.15, 4150);
-}
-
 
 float temp_as_k(int value) {
   float temp = compute_temperature(compute_resistance(value, pulldown_resistance));
@@ -413,7 +329,7 @@ float temp_as_k(int value) {
   return temp;
 }
 
-void loop_main() {
+void loop() {
   float temp;
   int i;
   int yes=0;
@@ -425,21 +341,5 @@ void loop_main() {
   // will give us a range from [-20, 39.75] celcius.
   write((temp_as_k(measure_temperature()) -273.15 + 20) * 4.0);
   delay(10000);
-}
-
-void loop() {
-  if (!digitalRead(11)) {
-    Serial.println("Trying to set low\n");
-    return low_set_loop();
-  }
- 
-  if (!digitalRead(12)){
-    Serial.println("Clearing the calibration\n");
-    eeprom_erase_int();
-    all_on();
-    while(true);
-  }
-   
-  loop_main();
 }
 
