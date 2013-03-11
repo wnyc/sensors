@@ -19,27 +19,7 @@
  * of 9 LEDS connected to digital pins 2-10 inclusive, wired in series
  * with a resistor between about 300 and 600 ohms.
  * 
- * Optional calibration:
- * 
- * 1. Power down the sensor
- * 2. Fill a glass half full with crused ice and top it off with
- *    water.  Allow to sit for 5 minutes.
- * 3. Immerse the temperature probe into the ice wate mixture
- * 4. Jumper ground to digital I/O #11
- * 5. Power on the sensor with battery power only and leave powered on
- *    until the LEDs stop flashing. This shouldf require about 5 minutes.
- * 6. When the LEDS stop flashing power off the sensor.
- * 7. Remove the wire to digital I/O #11 
- * 
- * To erase the calibration data:
- * 
- * 1. Power donw the sensor
- * 2. Jumper ground to digital I/O #12 
- * 3. Wait until all of the lights are lit
- * 4. Power down the sensor
- * 5. Remove the wire attached to digital I/O #12
- * 
- * How to read the temperature.
+ * How temperature recording works
  *  
  * There are four distinct steps that go into turning a sensor value
  * into a temperature.  First we have to address the non-linearity of
