@@ -123,13 +123,12 @@
  * R is the anticipated resistance
  */ 
 
-const float B = 2700;
+const float B = 3950;
 const float R0 = 50000;
 const float T0 = 298.15;
-const float expected_resistance = R0 * exp(B * (1/273.15 - 1/T0));
 
 /* If you change the pulldown resistors change this. */
-const float pulldown_resistance = 50000;
+const float pulldown_resistance = 47000;
 
 /* If reverse the direction of the resistors and sensor, you have
  * what's called a pull up, not pull down.  Set this to true. 
