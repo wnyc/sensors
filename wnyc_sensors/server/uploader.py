@@ -38,7 +38,7 @@ class GoogleFormUploader(Thread):
             return 
 
         with open(os.path.join("/var/www/cicada/raw/upload", email_hash), "a+") as f:
-            f.write("%02f %01d" % (now, temperature))
+            f.write("%02f %01f\n" % (now, temperature))
         if now - self.last_visited.get(address_hash, 0) < 24 * 60 * 60:
             print next
             return 
