@@ -13,7 +13,7 @@ def usage():
     print
     print "Run cicada.py to upload your sensor's temperature to WNYC and learn how to check on the status of your upload"
     print 
-    print "Your systems has the following serial ports; your thermometer will be one of them:"
+    print "Your system has the following serial ports; your thermometer will be one of them:"
     serial.tools.list_ports.main()
     import sys
     sys.exit(1)
