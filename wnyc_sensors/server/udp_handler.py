@@ -10,5 +10,7 @@ class UDPHandler(SocketServer.BaseRequestHandler):
     """
 
     def handle(self):
-        print self.write(Packet(self.request[0]).as_dict())
+        packet = Packet(self.request[0]).as_dict()
+        print packet
+        self.write(packet)
 

@@ -20,6 +20,7 @@ setup(
     py_modules = [
         "wnyc_sensors/server/udp_handler",
         "wnyc_sensors/server/tcp_handler",
+        "wnyc_sensors/server/uploader",
         "wnyc_sensors/server/udp_sender",
         "wnyc_sensors/server/packet_parser",
         "wnyc_sensors/server/__init__",

@@ -53,8 +53,9 @@ class CicadaIPPacket(Packet, ParseFloat):
         d = Packet.as_dict(self)
         d.update({'temp': self.temp,
                   'email': self.email,
-                  'addr': self.addr,
+                  'address': self.address,
                   'user': self.user})
+        return d
 
     def parse(self):
         self.temp = self.pop_float()

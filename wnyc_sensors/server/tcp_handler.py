@@ -7,6 +7,8 @@ from wnyc_sensors.server.packet_parser import Packet
 class SensorHTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def do_GET(self):
         print self.path
+        self.send_response(200)
+        self.end_headers()
 
 def main(server_class=BaseHTTPServer.HTTPServer,
          handler_class=SensorHTTPRequestHandler,
