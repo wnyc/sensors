@@ -1,3 +1,4 @@
+import urllib
 PACKET_PARSE_CLASSES = {}
 
 class ParseHitMiss():
@@ -13,12 +14,16 @@ class Packet(str):
         str.__init__(self, value)
         self.tokens = list(reversed(self.split(" ")))
         packet_type = self.pop()
-        if packet_type not in PACKET_PARSE_CLASSES:
+        packet_type = PACKET_PARSE_CLASSES.get(packet_type)
+        if not packet_type:
             raise ValueError("Invalid UDP packet.  Don't recognize packet type: " + repr(packet_type))
-        self.__class__ = PACKET_PARSE_CLASSES[packet_type]
         self.hash = self.pop_hex()
         self.device = self.pop_int()
         self.version = self.pop_int()
+        packet_type = packet_type.get(self.version)
+        if not packet_type:
+            raise ValueError("Invalid UDP Packet.  Don't recognize packet version: %d" % self.version)
+        self.__class__ = packet_type
         self.parse()
 
     def as_dict(self):
@@ -39,6 +44,23 @@ class Packet(str):
     def pops(self, count=1):
         for _ in range(count):
             yield self.pop()
+
+class CicadaIPPacket(Packet, ParseFloat):
+    def pop_str(self):
+        return urllib.unquote_plus(self.pop())
+    
+    def as_dict(self):
+        d = Packet.as_dict(self)
+        d.update({'temp': self.temp,
+                  'email': self.email,
+                  'addr': self.addr,
+                  'user': self.user})
+
+    def parse(self):
+        self.temp = self.pop_float()
+        self.email = self.pop_str()
+        self.user = self.pop_str()
+        self.address = self.pop_str()
         
 
 class CicadiaPacket(Packet, ParseHitMiss, ParseFloat):
@@ -63,5 +85,7 @@ class FlasherPacket(Packet, ParseHitMiss):
     def parse(self):
         self.hit, self.miss = self.pop_hit_miss()
 
-PACKET_PARSE_CLASSES['cicadia'] = CicadiaPacket
-PACKET_PARSE_CLASSES['flashers'] = FlasherPacket
+PACKET_PARSE_CLASSES['cicada'] = {1:CicadiaPacket,
+                                  2:CicadaIPPacket}
+
+PACKET_PARSE_CLASSES['flashers'] = {1:FlasherPacket}
