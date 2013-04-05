@@ -123,13 +123,13 @@
  * R is the anticipated resistance
  */ 
 
-const float B = 3950;
-const float R0 = 50000;
+const float B = 3380;
+const float R0 = 10000;
 const float T0 = 298.15;
 const float expected_resistance = R0 * exp(B * (1/273.15 - 1/T0));
 
 /* If you change the pulldown resistors change this. */
-const float pulldown_resistance = 47000;
+const float pulldown_resistance = 10000;
 
 /* If reverse the direction of the resistors and sensor, you have
  * what's called a pull up, not pull down.  Set this to true. 
@@ -153,7 +153,6 @@ const int AD_MAX = 1023;
 
 void setup()
 {
-   Serial.begin(19200); 
    pinMode(2, OUTPUT);
    pinMode(3, OUTPUT);
    pinMode(4, OUTPUT);
@@ -203,15 +202,7 @@ float compute_resistance(int value, float pulldown_resistance) {
  * return the temperature in kelvin.
  */ 
 float compute_temperature(float resistance, float R0, float T0, float B) {
-   Serial.println("Compute temperature");
-   Serial.print("Resistance: ");
-   Serial.println(resistance);
-   Serial.print("R0: ");
-   Serial.println(R0);
-   Serial.print("T0: ");
-   Serial.println(T0);
-   Serial.print("B: ");
-   Serial.println(B);
+ 
    return 1/(1.0 / T0 + (1.0 / B) * log(resistance / R0));
 }
 
@@ -253,11 +244,7 @@ void all_off() {
  */
 
 void write(unsigned int i) {
-  Serial.print("Temp: ");
-  Serial.print((i * 9.0 - 80.0 ) / 20.0);
-  Serial.println("F");
-  Serial.print("Encoded value: ");
-  Serial.println(i);
+ 
 
   if (i > 255 + 16) {
     all_on();
@@ -303,12 +290,7 @@ int measure_temperature() {
 
 float temp_as_k(int value) {
   float temp = compute_temperature(compute_resistance(value, pulldown_resistance));
-  Serial.print("Resistance: ");
-  Serial.println(compute_resistance(value, pulldown_resistance));
-  Serial.print("Value: ");
-  Serial.println(value);
-  Serial.print("Kelvin: ");
-  Serial.println(temp);
+ 
   return temp;
 }
 
