@@ -123,13 +123,13 @@
  * R is the anticipated resistance
  */ 
 
-const float B = 2700;
+const float B = 3950;
 const float R0 = 50000;
 const float T0 = 298.15;
 const float expected_resistance = R0 * exp(B * (1/273.15 - 1/T0));
 
 /* If you change the pulldown resistors change this. */
-const float pulldown_resistance = 50000;
+const float pulldown_resistance = 47000;
 
 /* If reverse the direction of the resistors and sensor, you have
  * what's called a pull up, not pull down.  Set this to true. 
@@ -143,7 +143,7 @@ const bool using_pullups = false;
  * jack.
  */
 
-const int temp_samples = 16;
+const int temp_samples = 31; //Cannot exceed 31 or we'll overload in measure_temp
 
 /* The max value the A/D converter shows.  For an adrunio this will
  * always be 1023 */
@@ -233,10 +233,10 @@ void error_flash() {
   for(i=0; i<9; i++)
     setBit(i, i & 1);
  
-  delay(500);
+  delay(250);
   for(i=0; i<9; i++)
     setBit(i, ~(i & 1));
-  delay(500);
+  delay(250);
 }
 
 void all_off() {
@@ -292,10 +292,13 @@ void write(unsigned int i) {
 int measure_temperature() {
   int i;
   int sum = 0;
-  for(i=0;i<temp_samples;i++)
+  analogRead(THERMOMETER); // Throw one away
+  for(i=0;i<temp_samples;i++) {
+    delay(1);
     sum += analogRead(THERMOMETER);
+  }
   sum /= temp_samples;
-  return sum;
+  return sum; 
 }
 
 float temp_as_k(int value) {
