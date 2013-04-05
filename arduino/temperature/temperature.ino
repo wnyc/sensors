@@ -122,7 +122,7 @@
  * T is the temperature the resistor is actually at
  * R is the anticipated resistance
  */ 
-
+//http://www.digikey.com/product-detail/en/MF52C1103F3380/317-1376-ND/1840604
 const float B = 3380;
 const float R0 = 10000;
 const float T0 = 298.15;
